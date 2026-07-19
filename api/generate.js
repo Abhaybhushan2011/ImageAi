@@ -1,5 +1,4 @@
 export default async function handler(req, res) {
-    // Vercel Serverless Function sirf POST request allow karega
     if (req.method !== 'POST') {
         return res.status(405).json({ error: 'Only POST requests allowed' });
     }
@@ -7,9 +6,9 @@ export default async function handler(req, res) {
     try {
         const { prompt } = req.body;
 
-        // Hugging Face API call (Vercel Node 18+ use karta hai, so fetch default kaam karega)
+        // Yahan maine fast aur reliable model (Stable Diffusion v1.5) select kiya hai
         const response = await fetch(
-            "https://api-inference.huggingface.co/models/stabilityai/stable-diffusion-xl-base-1.0",
+            "https://api-inference.huggingface.co/models/runwayml/stable-diffusion-v1-5",
             {
                 headers: {
                     Authorization: `Bearer ${process.env.HF_API_KEY}`,
@@ -20,20 +19,20 @@ export default async function handler(req, res) {
             }
         );
 
+        // Ab agar error aayega toh hume exact error message milega Hugging Face se
         if (!response.ok) {
-            throw new Error(`Hugging Face Error: ${response.statusText}`);
+            const errorDetails = await response.text();
+            return res.status(response.status).json({ error: `Hugging Face se Error: ${errorDetails}` });
         }
 
-        // Image data ko base64 format mein convert karna
         const arrayBuffer = await response.arrayBuffer();
         const buffer = Buffer.from(arrayBuffer);
         const base64Image = buffer.toString('base64');
 
-        // Frontend ko image send karna
         res.status(200).json({ image: `data:image/jpeg;base64,${base64Image}` });
 
     } catch (error) {
         console.error("Server Error:", error);
-        res.status(500).json({ error: "Failed to generate image." });
+        res.status(500).json({ error: error.message });
     }
 }
